@@ -208,4 +208,27 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=custom_css, title="Flux 2 Klein
         )
 
 if __name__ == "__main__":
-    app.launch(server_name="127.0.0.1", server_port=7865, inbrowser=True,share=True)
+    import os
+    server_name = "0.0.0.0" if "COLAB_GPU" in os.environ or "COLAB_JUPYTER_IP" in os.environ else "127.0.0.1"
+    port = 7865
+    
+    # Google Colab native proxy (bypasses Gradio's share server issues entirely)
+    try:
+        import google.colab
+        from google.colab.output import eval_js
+        public_url = eval_js(f"google.colab.kernel.proxyPort({port})")
+        print("\n" + "="*60)
+        print("🟢 NGrok/Gradio share is down, but you are in Colab!")
+        print(f"🔗 COLAB PUBLIC URL: {public_url}")
+        print("Click the link above to access your Gradio App securely.")
+        print("="*60 + "\n")
+    except ImportError:
+        pass
+
+    try:
+        app.launch(server_name=server_name, server_port=port, inbrowser=True, share=True)
+    except Exception as e:
+        print(f"Gradio share failed due to internet or certificate error: {e}")
+        # Launch locally without share=True if it fails to prevent crashing
+        print("Launching local server only. Use the Colab Public URL above instead!")
+        app.launch(server_name=server_name, server_port=port, inbrowser=True, share=False)
