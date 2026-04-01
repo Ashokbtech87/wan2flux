@@ -273,7 +273,7 @@ if __name__ == "__main__":
         print("🟢 In Colab Environment Detected!")
         print(f"🔗 NATIVE COLAB URL: {public_url}")
         print("="*60 + "\n")
-    except ImportError:
+    except Exception:
         pass
 
     try:
