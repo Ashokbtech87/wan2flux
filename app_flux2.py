@@ -207,20 +207,71 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=custom_css, title="Flux 2 Klein
             outputs=[output_image]
         )
 
+def start_cloudflare_tunnel(port):
+    import subprocess
+    import threading
+    import urllib.request
+    import platform
+    import os
+
+    print("Starting Cloudflare Tunnel...")
+    system = platform.system().lower()
+    
+    executable = "cloudflared"
+    if system == "windows":
+        executable = "cloudflared.exe"
+        url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+    elif system == "linux":
+        url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+    else:
+        print("Cloudflare Tunnel auto-setup not supported on this OS.")
+        return
+
+    exe_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), executable)
+    if not os.path.exists(exe_path):
+        print("Downloading cloudflared...")
+        try:
+            urllib.request.urlretrieve(url, exe_path)
+            if system != "windows":
+                os.chmod(exe_path, 0o755)
+        except Exception as e:
+            print(f"Failed to download cloudflared: {e}")
+            return
+
+    def run_tunnel():
+        cmd = [exe_path, "tunnel", "--url", f"http://127.0.0.1:{port}"]
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        while True:
+            line = process.stderr.readline()
+            if not line:
+                break
+            if "trycloudflare.com" in line:
+                for part in line.split():
+                    if "trycloudflare.com" in part:
+                        print("\n" + "="*60)
+                        print(f"☁️ CLOUDFLARE TUNNEL URL: {part}")
+                        print("Click the link above to access your Gradio App securely (bypasses Gradio Share errors).")
+                        print("="*60 + "\n")
+                        return
+
+    threading.Thread(target=run_tunnel, daemon=True).start()
+
 if __name__ == "__main__":
     import os
     server_name = "0.0.0.0" if "COLAB_GPU" in os.environ or "COLAB_JUPYTER_IP" in os.environ else "127.0.0.1"
     port = 7865
     
-    # Google Colab native proxy (bypasses Gradio's share server issues entirely)
+    # Fire up the Cloudflare Tunnel fallback
+    start_cloudflare_tunnel(port)
+    
+    # Colab Native Proxy
     try:
         import google.colab
         from google.colab.output import eval_js
         public_url = eval_js(f"google.colab.kernel.proxyPort({port})")
         print("\n" + "="*60)
-        print("🟢 NGrok/Gradio share is down, but you are in Colab!")
-        print(f"🔗 COLAB PUBLIC URL: {public_url}")
-        print("Click the link above to access your Gradio App securely.")
+        print("🟢 In Colab Environment Detected!")
+        print(f"🔗 NATIVE COLAB URL: {public_url}")
         print("="*60 + "\n")
     except ImportError:
         pass
@@ -229,6 +280,4 @@ if __name__ == "__main__":
         app.launch(server_name=server_name, server_port=port, inbrowser=True, share=True)
     except Exception as e:
         print(f"Gradio share failed due to internet or certificate error: {e}")
-        # Launch locally without share=True if it fails to prevent crashing
-        print("Launching local server only. Use the Colab Public URL above instead!")
         app.launch(server_name=server_name, server_port=port, inbrowser=True, share=False)
