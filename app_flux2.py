@@ -26,7 +26,7 @@ sys.modules.setdefault("wgp", sys.modules[__name__])
 from shared.utils import files_locator as fl
 from shared.utils.loras_mutipliers import parse_loras_multipliers
 from models.flux.flux_main import model_factory
-from models.flux.flux_handler import family_handler
+from models.flux.flux_handler import family_handler, get_text_encoder_name
 from mmgp import offload
 
 # ── Config ───────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ def get_pipeline():
     if _pipeline is not None:
         return _pipeline
     print("[flux2] Initializing FLUX.2 Klein 9B…")
-    text_encoder_filename = family_handler.get_text_encoder_name("flux2_klein_9b", "bf16")
+    text_encoder_filename = get_text_encoder_name("flux2_klein_9b", "bf16")
     _pipeline = model_factory(
         checkpoint_dir="ckpts",
         model_filename=["flux-2-klein-9b.safetensors"],

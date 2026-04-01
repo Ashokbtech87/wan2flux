@@ -36,7 +36,8 @@ sys.modules.setdefault("wgp", sys.modules[__name__])
 from shared.utils import files_locator as fl
 from shared.utils.loras_mutipliers import parse_loras_multipliers
 from models.flux.flux_main import model_factory
-from models.flux.flux_handler import family_handler
+from contextlib import asynccontextmanager
+from models.flux.flux_handler import family_handler, get_text_encoder_name
 from mmgp import offload
 from PIL import Image
 
@@ -66,10 +67,18 @@ OUTPUT_DIR = Path(ROOT) / "outputs_flux2"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # ── FastAPI App ──────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Pre-load model at startup."""
+    print("[flux2-api] Pre-loading model on startup…")
+    get_pipeline()
+    yield
+
 app = FastAPI(
     title="FLUX.2 Klein 9B API",
     description="REST API for FLUX.2 Klein 9B image generation with LoRA + image conditioning.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -87,7 +96,7 @@ def get_pipeline():
     if _pipeline is not None:
         return _pipeline
     print("[flux2-api] Loading FLUX.2 Klein 9B model…")
-    text_enc = family_handler.get_text_encoder_name("flux2_klein_9b", "bf16")
+    text_enc = get_text_encoder_name("flux2_klein_9b", "bf16")
     _pipeline = model_factory(
         checkpoint_dir="ckpts",
         model_filename=["flux-2-klein-9b.safetensors"],
@@ -318,12 +327,6 @@ def get_output(filename: str):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(str(path), media_type="image/png")
 
-
-# ── Startup: eagerly load model ───────────────────────────────────────────────
-@app.on_event("startup")
-def startup():
-    print("[flux2-api] Pre-loading model on startup…")
-    get_pipeline()
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
