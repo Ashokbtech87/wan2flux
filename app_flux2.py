@@ -208,4 +208,4 @@ with gr.Blocks(theme=gr.themes.Monochrome(), css=custom_css, title="Flux 2 Klein
         )
 
 if __name__ == "__main__":
-    app.launch(server_name="127.0.0.1", server_port=7865, inbrowser=True)
+    app.launch(server_name="127.0.0.1", server_port=7865, inbrowser=True,share=True)
