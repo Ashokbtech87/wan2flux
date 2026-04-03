@@ -11826,6 +11826,7 @@ def create_ui():
                     if args.lock_model:    
                         gr.Markdown("<div class='title-with-lines'><div class=line></div><h2>" + get_model_name(transformer_type) + "</h2><div class=line></div>")
                         model_family = gr.Dropdown(visible=False, value= "")
+                        model_base_type_choice = gr.Dropdown(visible=False, value="")
                         model_choice = gr.Dropdown(visible=False, value= transformer_type, choices= [transformer_type])
                     else:
                         gr.Markdown("<div class='title-with-lines'><div class=line width=100%></div></div>")                        
