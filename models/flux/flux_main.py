@@ -103,7 +103,7 @@ class model_factory:
         if self.is_flux2:
             self.model = load_flow_model(
                 self.name,
-                model_filename if source is None else source,
+                model_filename[0] if source is None else source,
                 torch_device,
                 preprocess_sd=preprocess_flux_state_dict,
             )

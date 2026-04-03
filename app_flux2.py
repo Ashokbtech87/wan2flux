@@ -30,7 +30,12 @@ from models.flux.flux_handler import family_handler, get_text_encoder_name
 from mmgp import offload
 
 # ── Config ───────────────────────────────────────────────────────────────────
-fl.set_checkpoints_paths(["ckpts", "models", "."])
+# Use absolute paths so fl.locate_file() works regardless of CWD (e.g. Colab)
+fl.set_checkpoints_paths([
+    os.path.join(ROOT, "ckpts"),
+    os.path.join(ROOT, "models"),
+    ROOT,
+])
 
 config_path = os.path.join(ROOT, "defaults", "flux2_klein_9b.json")
 try:
@@ -57,10 +62,28 @@ def get_pipeline():
     if _pipeline is not None:
         return _pipeline
     print("[flux2] Initializing FLUX.2 Klein 9B…")
+
+    # ── Resolve model file (absolute path required by mmgp/offload) ──────────
+    MODEL_FILENAME = "flux-2-klein-9b.safetensors"
+    model_path = fl.locate_file(MODEL_FILENAME, error_if_none=False)
+    if model_path is None:
+        searched = [os.path.abspath(os.path.join(d, MODEL_FILENAME))
+                    for d in ["ckpts", "models", "."]]
+        raise FileNotFoundError(
+            f"[flux2] Model file '{MODEL_FILENAME}' not found.\n"
+            f"Searched in: {searched}\n"
+            f"Download it with:\n"
+            f"  import urllib.request; urllib.request.urlretrieve(\n"
+            f"    'https://huggingface.co/DeepBeepMeep/Flux2/resolve/main/flux-2-klein-9b.safetensors',\n"
+            f"    'ckpts/flux-2-klein-9b.safetensors')\n"
+            f"Or run the download cell in your Colab notebook first."
+        )
+    print(f"[flux2] Found model → {model_path}")
+
     text_encoder_filename = get_text_encoder_name("flux2_klein_9b", "bf16")
     _pipeline = model_factory(
         checkpoint_dir="ckpts",
-        model_filename=["flux-2-klein-9b.safetensors"],
+        model_filename=[model_path],
         model_type="flux2_klein_9b",
         model_def=model_def,
         base_model_type="flux2_klein_9b",
