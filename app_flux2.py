@@ -66,7 +66,7 @@ def get_pipeline():
     # ── Auto-download model weights if missing ─────────────────────────────
     ckpts_dir = os.path.join(ROOT, "ckpts")
     os.makedirs(ckpts_dir, exist_ok=True)
-    from huggingface_hub import hf_hub_download
+    from huggingface_hub import hf_hub_download, snapshot_download
     repo_id = "DeepBeepMeep/Flux2"
 
     MODEL_FILENAME = "flux-2-klein-9b.safetensors"
@@ -82,6 +82,20 @@ def get_pipeline():
         print(f"[flux2] Downloading {VAE_FILENAME} from HuggingFace...")
         hf_hub_download(repo_id=repo_id, filename=VAE_FILENAME, local_dir=ckpts_dir)
         print(f"[flux2] Downloaded → {VAE_FILENAME}")
+        
+    TEXT_ENC_FILENAME = "qwen3_8b_bf16.safetensors"
+    te_path = fl.locate_file(TEXT_ENC_FILENAME, error_if_none=False)
+    if te_path is None:
+        print(f"[flux2] Downloading {TEXT_ENC_FILENAME} from HuggingFace...")
+        hf_hub_download(repo_id=repo_id, filename=TEXT_ENC_FILENAME, local_dir=ckpts_dir)
+        print(f"[flux2] Downloaded → {TEXT_ENC_FILENAME}")
+        
+    TOKENIZER_DIR = "qwen3_8b"
+    tokenizer_path = fl.locate_folder(TOKENIZER_DIR, error_if_none=False)
+    if tokenizer_path is None:
+        print(f"[flux2] Downloading tokenizer folder '{TOKENIZER_DIR}' from HuggingFace...")
+        snapshot_download(repo_id=repo_id, allow_patterns=f"{TOKENIZER_DIR}/*", local_dir=ckpts_dir)
+        print(f"[flux2] Downloaded → {TOKENIZER_DIR}/*")
 
     text_encoder_filename = get_text_encoder_name("flux2_klein_9b", "bf16")
     _pipeline = model_factory(
