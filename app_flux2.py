@@ -63,22 +63,25 @@ def get_pipeline():
         return _pipeline
     print("[flux2] Initializing FLUX.2 Klein 9B…")
 
-    # ── Resolve model file (absolute path required by mmgp/offload) ──────────
+    # ── Auto-download model weights if missing ─────────────────────────────
+    ckpts_dir = os.path.join(ROOT, "ckpts")
+    os.makedirs(ckpts_dir, exist_ok=True)
+    from huggingface_hub import hf_hub_download
+    repo_id = "DeepBeepMeep/Flux2"
+
     MODEL_FILENAME = "flux-2-klein-9b.safetensors"
     model_path = fl.locate_file(MODEL_FILENAME, error_if_none=False)
     if model_path is None:
-        searched = [os.path.abspath(os.path.join(d, MODEL_FILENAME))
-                    for d in ["ckpts", "models", "."]]
-        raise FileNotFoundError(
-            f"[flux2] Model file '{MODEL_FILENAME}' not found.\n"
-            f"Searched in: {searched}\n"
-            f"Download it with:\n"
-            f"  import urllib.request; urllib.request.urlretrieve(\n"
-            f"    'https://huggingface.co/DeepBeepMeep/Flux2/resolve/main/flux-2-klein-9b.safetensors',\n"
-            f"    'ckpts/flux-2-klein-9b.safetensors')\n"
-            f"Or run the download cell in your Colab notebook first."
-        )
-    print(f"[flux2] Found model → {model_path}")
+        print(f"[flux2] Downloading {MODEL_FILENAME} from HuggingFace...")
+        model_path = hf_hub_download(repo_id=repo_id, filename=MODEL_FILENAME, local_dir=ckpts_dir)
+        print(f"[flux2] Downloaded → {model_path}")
+
+    VAE_FILENAME = "flux2_vae.safetensors"
+    vae_path = fl.locate_file(VAE_FILENAME, error_if_none=False)
+    if vae_path is None:
+        print(f"[flux2] Downloading {VAE_FILENAME} from HuggingFace...")
+        hf_hub_download(repo_id=repo_id, filename=VAE_FILENAME, local_dir=ckpts_dir)
+        print(f"[flux2] Downloaded → {VAE_FILENAME}")
 
     text_encoder_filename = get_text_encoder_name("flux2_klein_9b", "bf16")
     _pipeline = model_factory(
